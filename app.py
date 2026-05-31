@@ -1,26 +1,32 @@
-
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
+import os
+from xtb_client import XTBClient
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Bot V2 beží 🚀"
+    return "Bot V2 + XTB beží 🚀"
 
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.json
 
-    symbol = data.get("symbol")
-    direction = data.get("direction")
-    entry = data.get("entry")
-    sl = data.get("sl")
-    trailing = data.get("trailing")
+@app.route("/price")
+def price():
+    login = os.getenv("XTB_LOGIN")
+    password = os.getenv("XTB_PASSWORD")
 
-    print(f"📈 SIGNAL: {symbol} {direction} ENTRY {entry}")
+    xtb = XTBClient(login, password)
+    xtb.connect()
 
-    return jsonify({"status": "ok"})
-    
+    us100 = xtb.get_price("US100")
+    gold = xtb.get_price("GOLD")
+
+    xtb.close()
+
+    return jsonify({
+        "US100": us100,
+        "GOLD": gold
+    })
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
