@@ -1,184 +1,49 @@
-import websocket
-import json
-import ssl
 import os
 import time
-import requests
-from flask import Flask
+from xtb_client import XTBClient
 
-app = Flask(__name__)
+# ENV VARIABLES (Render)
+XTB_LOGIN = os.getenv("XTB_LOGIN")
+XTB_PASSWORD = os.getenv("XTB_PASSWORD")
 
-# =========================
-# TELEGRAM
-# =========================
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-CHAT_ID = os.getenv("CHAT_ID")
+# INIT CLIENT
+client = XTBClient(XTB_LOGIN, XTB_PASSWORD)
 
-def send(msg):
-    try:
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        requests.post(url, data={"chat_id": CHAT_ID, "text": msg}, timeout=5)
-    except Exception as e:
-        print("Telegram error:", e)
 
-# =========================
-# XTB CLIENT
-# =========================
-class XTBClient:
-    def __init__(self, login, password):
-        self.login = login
-        self.password = password
-        self.ws = None
+def strategy(price_data):
+    """
+    TU DÁME TVOJU STRATÉGIU (V2)
+    zatiaľ len debug
+    """
 
-    def connect(self):
-        self.ws = websocket.create_connection(
-            "wss://ws.xtb.com/real",
-            sslopt={"cert_reqs": ssl.CERT_NONE}
-        )
+    bid = price_data.get("bid")
+    ask = price_data.get("ask")
 
-        login_cmd = {
-            "command": "login",
-            "arguments": {
-                "userId": self.login,
-                "password": self.password
-            }
-        }
+    print(f"📊 BID: {bid} | ASK: {ask}")
 
-        self.ws.send(json.dumps(login_cmd))
-        response = json.loads(self.ws.recv())
-        print("Login response:", response)
+    # placeholder logic
+    if bid and bid > 20000:
+        print("📈 SIGNAL: BUY (placeholder)")
+    elif bid and bid < 19000:
+        print("📉 SIGNAL: SELL (placeholder)")
 
-    def get_price(self, symbol="US100"):
-        cmd = {
-            "command": "getSymbol",
-            "arguments": {"symbol": symbol}
-        }
 
-        self.ws.send(json.dumps(cmd))
-        return json.loads(self.ws.recv())
-
-# =========================
-# STRATEGY
-# =========================
-prices = []
-MAX_CANDLES = 100
-
-def update_price(xtb):
-    global prices
-
-    data = xtb.get_price("US100")
-    price = data["returnData"]["ask"]
-
-    prices.append(price)
-
-    if len(prices) > MAX_CANDLES:
-        prices.pop(0)
-
-    return price
-
-def calculate_ema(period=20):
-    if len(prices) < period:
-        return None
-
-    k = 2 / (period + 1)
-    ema = prices[0]
-
-    for p in prices[1:]:
-        ema = p * k + ema * (1 - k)
-
-    return ema
-
-def get_signal(price, ema):
-    if ema is None:
-        return None
-
-    if price > ema:
-        return "LONG"
-    elif price < ema:
-        return "SHORT"
-
-    return None
-
-# =========================
-# MAIN BOT LOOP
-# =========================
-xtb = None
-
-@app.route("/")
-def home():
-    return "XTB BOT V2 beží 🚀"
-
-@app.route("/start")
-def start():
-    global xtb
-
-    login = os.getenv("XTB_LOGIN")
-    password = os.getenv("XTB_PASSWORD")
-
-    xtb = XTBClient(login, password)
-    xtb.connect()
-
-    trade = None
-    trailing_distance = 40
-
-    send("🤖 BOT STARTED")
+def run():
+    client.connect()
 
     while True:
         try:
-            price = update_price(xtb)
-            ema = calculate_ema()
-            signal = get_signal(price, ema)
+            price = client.get_price("US100")
 
-            print(f"Price: {price}, EMA: {ema}, Signal: {signal}")
-
-            # =====================
-            # NEW TRADE
-            # =====================
-            if trade is None and signal:
-                if signal == "LONG":
-                    trail = price - trailing_distance
-                else:
-                    trail = price + trailing_distance
-
-                trade = {
-                    "direction": signal,
-                    "entry": price,
-                    "trail": trail
-                }
-
-                send(f"📈 NEW TRADE\n{signal}\nEntry: {price:.2f}\nTrail: {trail:.2f}")
-
-            # =====================
-            # EXISTING TRADE
-            # =====================
-            if trade:
-                if trade["direction"] == "LONG":
-                    new_trail = price - trailing_distance
-
-                    if new_trail > trade["trail"]:
-                        trade["trail"] = new_trail
-                        send(f"🔄 TRAIL LONG: {new_trail:.2f}")
-
-                    if price <= trade["trail"]:
-                        send(f"❌ EXIT LONG: {price:.2f}")
-                        trade = None
-
-                elif trade["direction"] == "SHORT":
-                    new_trail = price + trailing_distance
-
-                    if new_trail < trade["trail"]:
-                        trade["trail"] = new_trail
-                        send(f"🔄 TRAIL SHORT: {new_trail:.2f}")
-
-                    if price >= trade["trail"]:
-                        send(f"❌ EXIT SHORT: {price:.2f}")
-                        trade = None
+            if price:
+                strategy(price)
 
             time.sleep(5)
 
         except Exception as e:
-            print("ERROR:", e)
-            time.sleep(5)
+            print("❌ LOOP ERROR:", e)
+            client.reconnect()
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    run()
