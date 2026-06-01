@@ -30,7 +30,8 @@ class XTBClient:
 
             self.ws.send(json.dumps(login_cmd))
             response = json.loads(self.ws.recv())
-
+            
+            print("LOGIN:", self.login)
             print("LOGIN RESPONSE:", response)
 
             if not response.get("status"):
