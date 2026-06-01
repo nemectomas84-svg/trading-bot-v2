@@ -13,55 +13,55 @@ class XTBClient:
         else:
             self.url = "wss://ws.xtb.com/real"
 
-def connect(self):
-    try:
-        self.ws = websocket.create_connection(
-            "wss://ws.xtb.com/demo",  # alebo real
-            sslopt={"cert_reqs": ssl.CERT_NONE}
-        )
+    def connect(self):
+        try:
+            self.ws = websocket.create_connection(
+                self.url,
+                sslopt={"cert_reqs": ssl.CERT_NONE}
+            )
 
-        login_cmd = {
-            "command": "login",
-            "arguments": {
-                "userId": self.login,
-                "password": self.password
+            login_cmd = {
+                "command": "login",
+                "arguments": {
+                    "userId": self.login,
+                    "password": self.password
+                }
             }
-        }
 
-        self.ws.send(json.dumps(login_cmd))
-        response = json.loads(self.ws.recv())
+            self.ws.send(json.dumps(login_cmd))
+            response = json.loads(self.ws.recv())
 
-        print("LOGIN RESPONSE:", response)
+            print("LOGIN RESPONSE:", response)
 
-        if not response.get("status"):
-            print("❌ LOGIN FAILED")
+            if not response.get("status"):
+                print("❌ LOGIN FAILED")
+                self.ws = None
+            else:
+                print("✅ CONNECTED")
+
+        except Exception as e:
+            print("❌ CONNECTION ERROR:", e)
             self.ws = None
-        else:
-            print("✅ CONNECTED")
 
-    except Exception as e:
-        print("❌ CONNECTION ERROR:", e)
-        self.ws = None
-        
-def get_price(self, symbol="US100"):
-    if not self.ws:
-        print("❌ NOT CONNECTED")
-        return None
+    def get_price(self, symbol="US100"):
+        if not self.ws:
+            print("❌ NOT CONNECTED")
+            return None
 
-    try:
-        cmd = {
-            "command": "getSymbol",
-            "arguments": {"symbol": symbol}
-        }
+        try:
+            cmd = {
+                "command": "getSymbol",
+                "arguments": {"symbol": symbol}
+            }
 
-        self.ws.send(json.dumps(cmd))
-        return json.loads(self.ws.recv())
+            self.ws.send(json.dumps(cmd))
+            return json.loads(self.ws.recv())
 
-    except Exception as e:
-        print("❌ GET PRICE ERROR:", e)
-        return None
-        
-def keep_alive(self):
+        except Exception as e:
+            print("❌ GET PRICE ERROR:", e)
+            return None
+
+    def keep_alive(self):
         if not self.ws:
             return
 
@@ -70,3 +70,7 @@ def keep_alive(self):
             return self.ws.recv()
         except:
             pass
+
+    def reconnect(self):
+        print("🔄 RECONNECTING...")
+        self.connect()
