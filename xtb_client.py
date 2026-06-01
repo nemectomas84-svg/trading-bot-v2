@@ -1,19 +1,24 @@
 import websocket
 import json
 import ssl
-import time
-
 
 class XTBClient:
-    def __init__(self, login, password):
+    def __init__(self, login, password, demo=True):
         self.login = login
         self.password = password
         self.ws = None
 
+        if demo:
+            self.url = "wss://ws.xtb.com/demo"
+        else:
+            self.url = "wss://ws.xtb.com/real"
+
     def connect(self):
         try:
+            print("🔌 Pripájam sa na:", self.url)
+
             self.ws = websocket.create_connection(
-                "wss://ws.xtb.com/real",
+                self.url,
                 sslopt={"cert_reqs": ssl.CERT_NONE}
             )
 
@@ -26,17 +31,22 @@ class XTBClient:
             }
 
             self.ws.send(json.dumps(login_cmd))
-            response = json.loads(self.ws.recv())
+            response = self.ws.recv()
 
-            if response.get("status"):
-                print("✅ XTB LOGIN OK")
-            else:
-                print("❌ LOGIN FAILED:", response)
+            print("✅ LOGIN RESPONSE:", response)
+
+            return True
 
         except Exception as e:
             print("❌ CONNECTION ERROR:", e)
+            self.ws = None
+            return False
 
     def get_price(self, symbol="US100"):
+        if not self.ws:
+            print("❌ Not connected")
+            return None
+
         try:
             cmd = {
                 "command": "getSymbol",
@@ -44,26 +54,18 @@ class XTBClient:
             }
 
             self.ws.send(json.dumps(cmd))
-            response = json.loads(self.ws.recv())
-
-            if response.get("status"):
-                return response["returnData"]
-            else:
-                print("❌ PRICE ERROR:", response)
-                return None
+            return json.loads(self.ws.recv())
 
         except Exception as e:
             print("❌ GET PRICE ERROR:", e)
             return None
 
     def keep_alive(self):
+        if not self.ws:
+            return
+
         try:
             self.ws.send(json.dumps({"command": "ping"}))
             return self.ws.recv()
         except:
-            print("⚠️ Keep alive failed")
-
-    def reconnect(self):
-        print("🔄 Reconnecting...")
-        time.sleep(3)
-        self.connect()
+            pass
