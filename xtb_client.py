@@ -9,9 +9,9 @@ class XTBClient:
         self.ws = None
 
         if demo:
-            self.url = "wss://ws.xtb.com/demo"
+            self.url = "wss://ws.xtb.com/demoStream"
         else:
-            self.url = "wss://ws.xtb.com/real"
+            self.url = "wss://ws.xtb.com/realStream"
 
     def connect(self):
         try:
