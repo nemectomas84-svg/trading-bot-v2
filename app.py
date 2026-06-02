@@ -21,7 +21,6 @@ def strategy(price):
 
     elif price < sma:
         print("📉 SELL SIGNAL")
-)
 
 
 def run():
