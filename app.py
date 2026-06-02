@@ -3,15 +3,25 @@ from binance_client import BinanceClient
 
 client = BinanceClient()
 
+prices = []
+
 
 def strategy(price):
-    print(f"📊 PRICE: {price}")
+    prices.append(price)
 
-    # TODO: tu dáme tvoju reálnu stratégiu
-    if price > 70000:
+    if len(prices) < 20:
+        return
+
+    sma = sum(prices[-20:]) / 20
+
+    print(f"PRICE: {price} | SMA: {sma}")
+
+    if price > sma:
         print("📈 BUY SIGNAL")
-    elif price < 60000:
+
+    elif price < sma:
         print("📉 SELL SIGNAL")
+)
 
 
 def run():
