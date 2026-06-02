@@ -1,48 +1,32 @@
-import os
 import time
-from xtb_client import XTBClient
+from binance_client import BinanceClient
 
-# ENV VARIABLES (Render)
-XTB_LOGIN = os.getenv("XTB_LOGIN")
-XTB_PASSWORD = os.getenv("XTB_PASSWORD")
-
-# INIT CLIENT
-client = XTBClient(XTB_LOGIN, XTB_PASSWORD)
+client = BinanceClient()
 
 
-def strategy(price_data):
-    """
-    TU DÁME TVOJU STRATÉGIU (V2)
-    zatiaľ len debug
-    """
+def strategy(price):
+    print(f"📊 PRICE: {price}")
 
-    bid = price_data.get("bid")
-    ask = price_data.get("ask")
-
-    print(f"📊 BID: {bid} | ASK: {ask}")
-
-    # placeholder logic
-    if bid and bid > 20000:
-        print("📈 SIGNAL: BUY (placeholder)")
-    elif bid and bid < 19000:
-        print("📉 SIGNAL: SELL (placeholder)")
+    # TODO: tu dáme tvoju reálnu stratégiu
+    if price > 70000:
+        print("📈 BUY SIGNAL")
+    elif price < 60000:
+        print("📉 SELL SIGNAL")
 
 
 def run():
-    client.connect()
-
     while True:
         try:
-            price = client.get_price("US100")
+            price = client.get_price("BTCUSDT")
 
             if price:
                 strategy(price)
 
-            time.sleep(5)
+            time.sleep(2)
 
         except Exception as e:
-            print("❌ LOOP ERROR:", e)
-            client.reconnect()
+            print("❌ ERROR:", e)
+            time.sleep(5)
 
 
 if __name__ == "__main__":
