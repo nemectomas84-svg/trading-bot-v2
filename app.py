@@ -1,7 +1,7 @@
 import time
 from binance_client import get_price
 from telegram_bot import send_message
-from paper_trader import init_log
+from paper_trader import init_log, strategy
 
 # 🔥 trader si už sám spraví init_log()
 init_log()
