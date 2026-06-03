@@ -1,7 +1,7 @@
 import requests
 
-BOT_TOKEN = "SEM_DAJ_TOKEN"
-CHAT_ID = "SEM_DAJ_CHAT_ID"
+BOT_TOKEN = "8764608057:AAGkxxNSFVWKDYmCeP6L-_FG5Dq-NFa0-lk"
+CHAT_ID = "1950077580"
 
 
 def send_message(text):
