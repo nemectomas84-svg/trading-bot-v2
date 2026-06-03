@@ -3,25 +3,21 @@ from binance_client import get_price
 from telegram_bot import send_message
 from paper_trader import PaperTrader
 
-# 🔥 trader si už sám spraví init_log()
 trader = PaperTrader()
 
 prices = []
 
-# 🔥 GLOBAL STATE
 last_signal = None
 last_trade_time = 0
 
-# 🔧 SETTINGS
-COOLDOWN = 300        # 5 minút
-MIN_DIFF = 5          # minimálny rozdiel EMA
+COOLDOWN = 300
+MIN_DIFF = 5
 CONFIRMATION_COUNT = 3
-MIN_MOVE = 20         # minimálný pohyb ceny
+MIN_MOVE = 20
 
 signal_buffer = []
 
 
-# 📊 EMA funkcia
 def ema(period, prices):
     if len(prices) < period:
         return None
@@ -35,7 +31,6 @@ def ema(period, prices):
     return ema_value
 
 
-# 🧠 STRATÉGIA
 def strategy(price):
     global last_signal, last_trade_time, signal_buffer
 
@@ -52,25 +47,21 @@ def strategy(price):
 
     print(f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f}")
 
-    # 🔥 vždy najprv update tradera (SL/TP/TRAIL)
+    # 🔥 vždy update trade
     trader.update(price)
 
-    # 🔥 FILTER SLABÉHO TRENDU
     diff = abs(ema20 - ema50)
     if diff < MIN_DIFF:
         return
 
-    # 🔥 MOMENTUM FILTER
     recent_prices = prices[-5:]
     move = max(recent_prices) - min(recent_prices)
 
     if move < MIN_MOVE:
         return
 
-    # určenie trendu
     current_signal = "BUY" if ema20 > ema50 else "SELL"
 
-    # 🔁 CONFIRMATION BUFFER
     signal_buffer.append(current_signal)
 
     if len(signal_buffer) > CONFIRMATION_COUNT:
@@ -78,7 +69,6 @@ def strategy(price):
 
     now = time.time()
 
-    # ✅ potvrdený signál
     if signal_buffer.count(current_signal) == CONFIRMATION_COUNT:
 
         if current_signal != last_signal and (now - last_trade_time > COOLDOWN):
@@ -94,7 +84,6 @@ def strategy(price):
             last_trade_time = now
 
 
-# 🔁 LOOP
 def run():
     while True:
         try:
