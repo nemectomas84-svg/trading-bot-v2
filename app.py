@@ -4,7 +4,7 @@ from telegram_bot import send_message
 from paper_trader import init_log
 
 # 🔥 trader si už sám spraví init_log()
-trader = init_log()
+init_log()
 
 prices = []
 
