@@ -2,6 +2,7 @@ import time
 from binance_client import get_price
 
 prices = []
+last_signal = None
 
 def ema(period, prices):
     if len(prices) < period:
@@ -15,8 +16,9 @@ def ema(period, prices):
 
     return ema_value
 
-
 def strategy(price):
+    global last_signal
+
     prices.append(price)
 
     if len(prices) < 50:
@@ -30,12 +32,17 @@ def strategy(price):
 
     print(f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f}")
 
+    # určenie trendu
     if ema20 > ema50:
-        print("📈 TREND: UP → BUY")
+        current_signal = "BUY"
+    else:
+        current_signal = "SELL"
 
-    elif ema20 < ema50:
-        print("📉 TREND: DOWN → SELL")
+    # 🔥 LEN PRI ZMENE
+    if current_signal != last_signal:
+        print(f"🚨 NEW SIGNAL: {current_signal}")
 
+        last_signal = current_signal
 
 def run():
     while True:
