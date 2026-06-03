@@ -13,13 +13,10 @@ trailing_price = None
 
 # vytvor log file ak neexistuje
 def init_log():
-    try:
-        with open("trades_log.csv", "x", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["time","action","price","reason","pnl","balance"])
-    except FileExistsError:
-        pass
-
+    with open("trades_log.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["time","action","price","reason","pnl","balance"])
+        
 def log_trade(action, price, reason, pnl):
     global balance
     with open("trades_log.csv", "a", newline="") as f:
