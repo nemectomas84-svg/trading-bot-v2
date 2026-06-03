@@ -1,10 +1,7 @@
 from binance.client import Client
-import os
 
-API_KEY = os.getenv("BINANCE_API_KEY")
-API_SECRET = os.getenv("BINANCE_API_SECRET")
-
-client = Client(API_KEY, API_SECRET)
+# API keys (môžu byť None – funguje aj bez nich)
+client = Client()
 
 
 def get_price(symbol="BTCUSDT"):
