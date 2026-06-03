@@ -16,10 +16,10 @@ class PaperTrader:
 
         if signal == "BUY":
             self.stop_loss = price * 0.995  # -0.5%
-            self.trailing_stop = price * 0.997
+            self.trailing_stop = price * 0.9985
         else:
             self.stop_loss = price * 1.005
-            self.trailing_stop = price * 1.003
+            self.trailing_stop = price * 1.0015
 
         print(f"📈 OPEN {signal} at {price:.2f}")
 
@@ -27,7 +27,9 @@ class PaperTrader:
         if self.position is None:
             return
 
-        if self.position == "BUY":
+        if self.position == "SELL" and price > self.entry_price * 1.002:
+            print(f"⚠️ EXIT SELL (trend fail) at {price:.2f}")
+            self.position = None
             # trailing stop
             new_trailing = price * 0.997
             if new_trailing > self.trailing_stop:
@@ -40,7 +42,9 @@ class PaperTrader:
                 print(f"❌ CLOSE BUY at {price:.2f} | PnL: {profit*100:.2f}% | BALANCE: {self.balance:.2f}")
                 self.position = None
 
-        if self.position == "SELL":
+        if self.position == "SELL" and price > self.entry_price * 1.002:
+            print(f"⚠️ EXIT SELL (trend fail) at {price:.2f}")
+            self.position = None
             new_trailing = price * 1.003
             if new_trailing < self.trailing_stop:
                 self.trailing_stop = new_trailing
