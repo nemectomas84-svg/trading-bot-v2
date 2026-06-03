@@ -1,95 +1,78 @@
 import csv
 from datetime import datetime
 
-balance = 1000
-position = None
-entry_price = 0
 
-SL_PERCENT = 0.5
-TP_PERCENT = 1.0
-TRAIL_PERCENT = 0.3
+class PaperTrader:
+    def __init__(self):
+        self.balance = 1000
+        self.position = None
+        self.entry_price = 0
 
-trailing_price = None
+        self.SL_PERCENT = 0.5
+        self.TP_PERCENT = 1.0
+        self.TRAIL_PERCENT = 0.3
 
-# vytvor log file ak neexistuje
-def init_log():
-    with open("trades_log.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["time","action","price","reason","pnl","balance"])
-        
-def log_trade(action, price, reason, pnl):
-    global balance
-    with open("trades_log.csv", "a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            action,
-            price,
-            reason,
-            round(pnl, 2),
-            round(balance, 2)
-        ])
+        self.trailing_price = None
 
-def open_buy(price):
-    global position, entry_price, trailing_price
+        self.init_log()
 
-    position = "BUY"
-    entry_price = price
-    trailing_price = price
+    # 🔥 reset logu pri štarte
+    def init_log(self):
+        with open("trades_log.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["time","action","price","reason","pnl","balance"])
 
-    print(f"📈 OPEN BUY at {price}")
-    log_trade("OPEN_BUY", price, "signal", 0)
+    def log_trade(self, action, price, reason, pnl):
+        with open("trades_log.csv", "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                action,
+                price,
+                reason,
+                round(pnl, 2),
+                round(self.balance, 2)
+            ])
 
-def close_buy(price, reason):
-    global position, balance
+    def open_position(self, side, price):
+        if side == "BUY":
+            self.position = "BUY"
+            self.entry_price = price
+            self.trailing_price = price
 
-    pnl = (price - entry_price)
+            print(f"📈 OPEN BUY at {price}")
+            self.log_trade("OPEN_BUY", price, "signal", 0)
 
-    balance += pnl
-    print(f"❌ CLOSE BUY at {price} | {reason} | PNL: {pnl:.2f} | BALANCE: {balance:.2f}")
+    def close_position(self, price, reason):
+        if self.position != "BUY":
+            return
 
-    log_trade("CLOSE_BUY", price, reason, pnl)
+        pnl = (price - self.entry_price)
+        self.balance += pnl
 
-    position = None
+        print(f"❌ CLOSE BUY at {price} | {reason} | PNL: {pnl:.2f} | BALANCE: {self.balance:.2f}")
 
-def check_trade(price):
-    global trailing_price
+        self.log_trade("CLOSE_BUY", price, reason, pnl)
 
-    if position != "BUY":
-        return
+        self.position = None
 
-    # STOP LOSS
-    if price <= entry_price * (1 - SL_PERCENT / 100):
-        close_buy(price, "SL")
-        return
+    def update(self, price):
+        if self.position != "BUY":
+            return
 
-    # TAKE PROFIT
-    if price >= entry_price * (1 + TP_PERCENT / 100):
-        close_buy(price, "TP")
-        return
+        # STOP LOSS
+        if price <= self.entry_price * (1 - self.SL_PERCENT / 100):
+            self.close_position(price, "SL")
+            return
 
-    # TRAILING STOP
-    if price > trailing_price:
-        trailing_price = price
+        # TAKE PROFIT
+        if price >= self.entry_price * (1 + self.TP_PERCENT / 100):
+            self.close_position(price, "TP")
+            return
 
-    if price <= trailing_price * (1 - TRAIL_PERCENT / 100):
-        close_buy(price, "TRAIL")
-        return
+        # TRAILING STOP
+        if price > self.trailing_price:
+            self.trailing_price = price
 
-def strategy(price, ema20, ema50):
-    print(f"PRICE: {price} | EMA20: {ema20} | EMA50: {ema50}")
-
-    # najprv kontroluj otvorený trade
-    check_trade(price)
-
-    global position
-
-    # BUY SIGNAL
-    if ema20 > ema50 and position is None:
-        print("🚨 BUY SIGNAL")
-        open_buy(price)
-
-    # SELL SIGNAL (zatvor BUY ak ešte žije)
-    elif ema20 < ema50 and position == "BUY":
-        print("🚨 SELL SIGNAL")
-        close_buy(price, "signal")
+        if price <= self.trailing_price * (1 - self.TRAIL_PERCENT / 100):
+            self.close_position(price, "TRAIL")
