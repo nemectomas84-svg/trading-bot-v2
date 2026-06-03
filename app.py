@@ -1,5 +1,6 @@
 import time
 from binance_client import get_price
+from telegram_bot import send_message
 
 prices = []
 
@@ -78,8 +79,11 @@ def strategy(price):
 
         if current_signal != last_signal and (now - last_trade_time > COOLDOWN):
 
-            print(f"🚨 TRADE SIGNAL: {current_signal}")
-
+            message = f"🚨 {current_signal} SIGNAL\nPRICE: {price:.2f}"
+            
+            print(message)
+            send_message(message)
+            
             last_signal = current_signal
             last_trade_time = now
 
