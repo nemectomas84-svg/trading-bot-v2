@@ -3,7 +3,9 @@ from binance_client import get_price
 from telegram_bot import send_message
 from paper_trader import PaperTrader
 
+# 🔥 trader si už sám spraví init_log()
 trader = PaperTrader()
+
 prices = []
 
 # 🔥 GLOBAL STATE
@@ -14,7 +16,7 @@ last_trade_time = 0
 COOLDOWN = 300        # 5 minút
 MIN_DIFF = 5          # minimálny rozdiel EMA
 CONFIRMATION_COUNT = 3
-MIN_MOVE = 20         # 🔥 minimálny pohyb ceny (momentum)
+MIN_MOVE = 20         # minimálný pohyb ceny
 
 signal_buffer = []
 
@@ -50,6 +52,9 @@ def strategy(price):
 
     print(f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f}")
 
+    # 🔥 vždy najprv update tradera (SL/TP/TRAIL)
+    trader.update(price)
+
     # 🔥 FILTER SLABÉHO TRENDU
     diff = abs(ema20 - ema50)
     if diff < MIN_DIFF:
@@ -63,10 +68,7 @@ def strategy(price):
         return
 
     # určenie trendu
-    if ema20 > ema50:
-        current_signal = "BUY"
-    else:
-        current_signal = "SELL"
+    current_signal = "BUY" if ema20 > ema50 else "SELL"
 
     # 🔁 CONFIRMATION BUFFER
     signal_buffer.append(current_signal)
@@ -76,7 +78,7 @@ def strategy(price):
 
     now = time.time()
 
-    # ✅ MUSÍ BYŤ POTVRDENÝ SIGNÁL
+    # ✅ potvrdený signál
     if signal_buffer.count(current_signal) == CONFIRMATION_COUNT:
 
         if current_signal != last_signal and (now - last_trade_time > COOLDOWN):
@@ -85,14 +87,11 @@ def strategy(price):
             
             print(message)
             send_message(message)
-            
+
             trader.open_position(current_signal, price)
 
             last_signal = current_signal
             last_trade_time = now
-            
-    # 🔄 update tradera KAŽDÝ tick
-    trader.update(price)
 
 
 # 🔁 LOOP
