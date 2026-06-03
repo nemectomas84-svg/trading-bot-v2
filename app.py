@@ -1,40 +1,51 @@
 import time
-from binance_client import BinanceClient
-
-client = BinanceClient()
+from binance_client import get_price
 
 prices = []
+
+def ema(period, prices):
+    if len(prices) < period:
+        return None
+
+    k = 2 / (period + 1)
+    ema_value = prices[0]
+
+    for price in prices[1:]:
+        ema_value = price * k + ema_value * (1 - k)
+
+    return ema_value
 
 
 def strategy(price):
     prices.append(price)
 
-    if len(prices) < 20:
+    if len(prices) < 50:
         return
 
-    sma = sum(prices[-20:]) / 20
+    ema20 = ema(20, prices[-50:])
+    ema50 = ema(50, prices[-50:])
 
-    print(f"PRICE: {price} | SMA: {sma}")
+    if ema20 is None or ema50 is None:
+        return
 
-    if price > sma:
-        print("📈 BUY SIGNAL")
+    print(f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f}")
 
-    elif price < sma:
-        print("📉 SELL SIGNAL")
+    if ema20 > ema50:
+        print("📈 TREND: UP → BUY")
+
+    elif ema20 < ema50:
+        print("📉 TREND: DOWN → SELL")
 
 
 def run():
     while True:
         try:
-            price = client.get_price("BTCUSDT")
-
-            if price:
-                strategy(price)
-
+            price = float(get_price())
+            strategy(price)
             time.sleep(2)
 
         except Exception as e:
-            print("❌ ERROR:", e)
+            print("ERROR:", e)
             time.sleep(5)
 
 
