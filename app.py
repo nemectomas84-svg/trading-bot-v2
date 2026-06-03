@@ -1,7 +1,9 @@
 import time
 from binance_client import get_price
 from telegram_bot import send_message
+from paper_trader import PaperTrader
 
+trader = PaperTrader()
 prices = []
 
 # 🔥 GLOBAL STATE
@@ -84,8 +86,13 @@ def strategy(price):
             print(message)
             send_message(message)
             
+            trader.open_position(current_signal, price)
+
             last_signal = current_signal
             last_trade_time = now
+            
+    # 🔄 update tradera KAŽDÝ tick
+    trader.update(price)
 
 
 # 🔁 LOOP
