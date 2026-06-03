@@ -8,56 +8,70 @@ trader = PaperTrader()
 prices = []
 
 last_signal = None
-last_trade_time = 0
+last_entry_time = 0
 
 COOLDOWN = 300
-MIN_DIFF = 5
-CONFIRMATION_COUNT = 3
-MIN_MOVE = 20
 
+EMA_FAST = 20
+EMA_SLOW = 50
+
+MIN_DIFF_PCT = 0.015
+MIN_MOVE_PCT = 0.04
+
+CONFIRMATION_COUNT = 3
 signal_buffer = []
 
 
-def ema(period, prices):
-    if len(prices) < period:
+def ema(period, values):
+    if len(values) < period:
         return None
 
     k = 2 / (period + 1)
-    ema_value = prices[0]
+    ema_value = values[0]
 
-    for price in prices[1:]:
-        ema_value = price * k + ema_value * (1 - k)
+    for value in values[1:]:
+        ema_value = value * k + ema_value * (1 - k)
 
     return ema_value
 
 
+def pct_diff(a, b):
+    return abs(a - b) / b * 100
+
+
 def strategy(price):
-    global last_signal, last_trade_time, signal_buffer
+    global last_signal, last_entry_time, signal_buffer
 
     prices.append(price)
 
-    if len(prices) < 50:
+    if len(prices) > 1000:
+        prices.pop(0)
+
+    trader.update(price)
+
+    if len(prices) < EMA_SLOW:
         return
 
-    ema20 = ema(20, prices[-50:])
-    ema50 = ema(50, prices[-50:])
+    ema20 = ema(EMA_FAST, prices[-EMA_SLOW:])
+    ema50 = ema(EMA_SLOW, prices[-EMA_SLOW:])
 
     if ema20 is None or ema50 is None:
         return
 
-    print(f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f}")
+    diff_pct = pct_diff(ema20, ema50)
 
-    # 🔥 vždy update trade
-    trader.update(price)
+    recent_prices = prices[-10:]
+    move_pct = (max(recent_prices) - min(recent_prices)) / price * 100
 
-    diff = abs(ema20 - ema50)
-    if diff < MIN_DIFF:
+    print(
+        f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
+        f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}%"
+    )
+
+    if diff_pct < MIN_DIFF_PCT:
         return
 
-    recent_prices = prices[-5:]
-    move = max(recent_prices) - min(recent_prices)
-
-    if move < MIN_MOVE:
+    if move_pct < MIN_MOVE_PCT:
         return
 
     current_signal = "BUY" if ema20 > ema50 else "SELL"
@@ -67,21 +81,38 @@ def strategy(price):
     if len(signal_buffer) > CONFIRMATION_COUNT:
         signal_buffer.pop(0)
 
+    if signal_buffer.count(current_signal) < CONFIRMATION_COUNT:
+        return
+
     now = time.time()
 
-    if signal_buffer.count(current_signal) == CONFIRMATION_COUNT:
+    if current_signal == "SELL":
+        if trader.position == "BUY":
+            send_message(f"⚠️ FORCE CLOSE BUY\nPRICE: {price:.2f}")
+            trader.force_close_on_opposite_signal(price)
 
-        if current_signal != last_signal and (now - last_trade_time > COOLDOWN):
+        last_signal = "SELL"
+        return
 
-            message = f"🚨 {current_signal} SIGNAL\nPRICE: {price:.2f}"
-            
-            print(message)
-            send_message(message)
+    if current_signal == "BUY":
+        if trader.position is not None:
+            return
 
-            trader.open_position(current_signal, price)
+        if last_signal == "BUY":
+            return
 
-            last_signal = current_signal
-            last_trade_time = now
+        if now - last_entry_time < COOLDOWN:
+            return
+
+        message = f"🚨 BUY SIGNAL\nPRICE: {price:.2f}"
+
+        print(message)
+        send_message(message)
+
+        trader.open_position("BUY", price)
+
+        last_signal = "BUY"
+        last_entry_time = now
 
 
 def run():
