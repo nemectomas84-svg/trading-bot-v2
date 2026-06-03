@@ -8,9 +8,10 @@ last_signal = None
 last_trade_time = 0
 
 # 🔧 SETTINGS
-COOLDOWN = 300  # 5 minút
-MIN_DIFF = 5    # minimálny rozdiel EMA
+COOLDOWN = 300        # 5 minút
+MIN_DIFF = 5          # minimálny rozdiel EMA
 CONFIRMATION_COUNT = 3
+MIN_MOVE = 20         # 🔥 minimálny pohyb ceny (momentum)
 
 signal_buffer = []
 
@@ -49,6 +50,13 @@ def strategy(price):
     # 🔥 FILTER SLABÉHO TRENDU
     diff = abs(ema20 - ema50)
     if diff < MIN_DIFF:
+        return
+
+    # 🔥 MOMENTUM FILTER
+    recent_prices = prices[-5:]
+    move = max(recent_prices) - min(recent_prices)
+
+    if move < MIN_MOVE:
         return
 
     # určenie trendu
