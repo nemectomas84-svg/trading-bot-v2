@@ -64,15 +64,21 @@ def strategy(price):
     recent_prices = prices[-30:]
     move_pct = (max(recent_prices) - min(recent_prices)) / price * 100
 
+    trend_up = ema20 > ema50
+    price_above_ema20 = price > ema20
+    strong_trend = diff_pct >= MIN_DIFF_PCT
+    enough_movement = move_pct >= MIN_MOVE_PCT
+
     print(
         f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
         f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}%"
     )
-# debug
+
     print(
-        f"FILTERS | trend_up={ema20 > ema50} | price_above_ema20={price > ema20} | "
-        f"strong_trend={diff_pct >= MIN_DIFF_PCT} | enough_movement={move_pct >= MIN_MOVE_PCT}"
+        f"FILTERS | trend_up={trend_up} | price_above_ema20={price_above_ema20} | "
+        f"strong_trend={strong_trend} | enough_movement={enough_movement}"
     )
+
     if not trend_up:
         print("NO BUY: market is in downtrend")
     elif not price_above_ema20:
@@ -81,24 +87,18 @@ def strategy(price):
         print("NO BUY: trend too weak")
     elif not enough_movement:
         print("NO BUY: movement too weak")
-#end debug    
-    
+
     if diff_pct < MIN_DIFF_PCT:
         return
 
     if move_pct < MIN_MOVE_PCT:
         return
 
-    trend_up = ema20 > ema50
-    price_above_ema20 = price > ema20
-    strong_trend = diff_pct >= MIN_DIFF_PCT
-    enough_movement = move_pct >= MIN_MOVE_PCT
-    
     if trend_up and price_above_ema20 and strong_trend and enough_movement:
         current_signal = "BUY"
     else:
         current_signal = "SELL"
-    
+        
     signal_buffer.append(current_signal)
 
     if len(signal_buffer) > CONFIRMATION_COUNT:
