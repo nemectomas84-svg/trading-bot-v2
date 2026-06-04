@@ -25,7 +25,7 @@ class PaperTrader:
         self.slippage_rate = slippage_rate
 
         self.SL_PERCENT = 0.12
-        self.TP_PERCENT = 0.35
+        self.TP_PERCENT = 0.60
         self.TRAIL_PERCENT = 0.08
         self.TRAILING_ACTIVATION_PERCENT = 0.08
         self.MAX_TRADE_SECONDS = 15 * 60
