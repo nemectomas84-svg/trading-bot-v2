@@ -73,6 +73,14 @@ def strategy(price):
         f"FILTERS | trend_up={ema20 > ema50} | price_above_ema20={price > ema20} | "
         f"strong_trend={diff_pct >= MIN_DIFF_PCT} | enough_movement={move_pct >= MIN_MOVE_PCT}"
     )
+    if not trend_up:
+        print("NO BUY: market is in downtrend")
+    elif not price_above_ema20:
+        print("NO BUY: price below EMA20")
+    elif not strong_trend:
+        print("NO BUY: trend too weak")
+    elif not enough_movement:
+        print("NO BUY: movement too weak")
 #end debug    
     
     if diff_pct < MIN_DIFF_PCT:
