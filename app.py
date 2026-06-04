@@ -66,6 +66,7 @@ def strategy(price):
     move_pct = (max(recent_prices) - min(recent_prices)) / price * 100
 
     trend_up = ema20 > ema50
+    trend_down = ema20 < ema50
     price_above_ema20 = price > ema20
     strong_trend = diff_pct >= MIN_DIFF_PCT
     enough_movement = move_pct >= MIN_MOVE_PCT
@@ -80,26 +81,37 @@ def strategy(price):
     )
 
     print(
-        f"FILTERS | trend_up={trend_up} | price_above_ema20={price_above_ema20} | "
-        f"strong_trend={strong_trend} | enough_movement={enough_movement} | "
-        f"not_overextended={not_overextended}"
+        f"FILTERS | trend_up={trend_up} | trend_down={trend_down} | "
+        f"price_above_ema20={price_above_ema20} | strong_trend={strong_trend} | "
+        f"enough_movement={enough_movement} | not_overextended={not_overextended}"
     )
 
-    if not trend_up:
-        print("NO BUY: market is in downtrend")
-    elif not price_above_ema20:
-        print("NO BUY: price below EMA20")
-    elif not strong_trend:
-        print("NO BUY: trend too weak")
-    elif not enough_movement:
-        print("NO BUY: movement too weak")
-    elif not not_overextended:
-        print("NO BUY: price too far above EMA20")
+    buy_condition = (
+        trend_up
+        and price_above_ema20
+        and strong_trend
+        and enough_movement
+        and not_overextended
+    )
 
-    if trend_up and price_above_ema20 and strong_trend and enough_movement and not_overextended:
+    if buy_condition:
         current_signal = "BUY"
-    else:
+    elif trend_down and strong_trend:
         current_signal = "SELL"
+    else:
+        current_signal = "HOLD"
+
+    if current_signal != "BUY":
+        if not trend_up:
+            print("NO BUY: market is not in uptrend")
+        elif not price_above_ema20:
+            print("NO BUY: price below EMA20")
+        elif not strong_trend:
+            print("NO BUY: trend too weak")
+        elif not enough_movement:
+            print("NO BUY: movement too weak")
+        elif not not_overextended:
+            print("NO BUY: price too far above EMA20")
 
     signal_buffer.append(current_signal)
 
@@ -117,6 +129,9 @@ def strategy(price):
             trader.force_close_on_opposite_signal(price)
 
         last_signal = "SELL"
+        return
+
+    if current_signal == "HOLD":
         return
 
     if current_signal == "BUY":
