@@ -35,7 +35,6 @@ class PaperTrader:
         self.max_profit_seen = 0.0
         self.max_drawdown_seen = 0.0
 
-        # Dočasne vypnuté zapisovanie do CSV počas testovania
         self.ENABLE_FILE_LOGGING = False
 
         self.init_log()
@@ -185,6 +184,12 @@ class PaperTrader:
             return
 
         pnl_pct_raw = (price - self.entry_price) / self.entry_price * 100
+
+        print(
+            f"POSITION=BUY | ENTRY={self.entry_price:.2f} | "
+            f"CURRENT={price:.2f} | PNL_RAW={pnl_pct_raw:.3f}% | "
+            f"TRAILING_PRICE={self.trailing_price:.2f}"
+        )
 
         if pnl_pct_raw > self.max_profit_seen:
             self.max_profit_seen = pnl_pct_raw
