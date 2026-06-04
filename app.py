@@ -69,6 +69,11 @@ def strategy(price):
     strong_trend = diff_pct >= MIN_DIFF_PCT
     enough_movement = move_pct >= MIN_MOVE_PCT
 
+    trend_up = ema20 > ema50
+    price_above_ema20 = price > ema20
+    strong_trend = diff_pct >= MIN_DIFF_PCT
+    enough_movement = move_pct >= MIN_MOVE_PCT
+
     print(
         f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
         f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}%"
