@@ -15,9 +15,9 @@ COOLDOWN = 300
 EMA_FAST = 20
 EMA_SLOW = 50
 
-MIN_DIFF_PCT = 0.030
-MIN_MOVE_PCT = 0.080
-MAX_PRICE_ABOVE_EMA20_PCT = 0.060
+MIN_DIFF_PCT = 0.040
+MIN_MOVE_PCT = 0.100
+MAX_PRICE_ABOVE_EMA20_PCT = 0.040
 
 CONFIRMATION_COUNT = 3
 
@@ -67,12 +67,18 @@ def strategy(price):
 
     trend_up = ema20 > ema50
     trend_down = ema20 < ema50
+
     price_above_ema20 = price > ema20
+
+    price_distance_ema20_pct = (price - ema20) / ema20 * 100
+
     strong_trend = diff_pct >= MIN_DIFF_PCT
     enough_movement = move_pct >= MIN_MOVE_PCT
 
-    price_distance_ema20_pct = (price - ema20) / ema20 * 100
-    not_overextended = price_distance_ema20_pct <= MAX_PRICE_ABOVE_EMA20_PCT
+    not_overextended = (
+        price_distance_ema20_pct >= 0
+        and price_distance_ema20_pct <= MAX_PRICE_ABOVE_EMA20_PCT
+    )
 
     print(
         f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
@@ -82,8 +88,9 @@ def strategy(price):
 
     print(
         f"FILTERS | trend_up={trend_up} | trend_down={trend_down} | "
-        f"price_above_ema20={price_above_ema20} | strong_trend={strong_trend} | "
-        f"enough_movement={enough_movement} | not_overextended={not_overextended}"
+        f"price_above_ema20={price_above_ema20} | "
+        f"strong_trend={strong_trend} | enough_movement={enough_movement} | "
+        f"not_overextended={not_overextended}"
     )
 
     buy_condition = (
