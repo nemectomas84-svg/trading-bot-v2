@@ -24,10 +24,10 @@ class PaperTrader:
         self.fee_rate = fee_rate
         self.slippage_rate = slippage_rate
 
-        self.SL_PERCENT = 0.15
+        self.SL_PERCENT = 0.12
         self.TP_PERCENT = 0.35
-        self.TRAIL_PERCENT = 0.10
-        self.TRAILING_ACTIVATION_PERCENT = 0.10
+        self.TRAIL_PERCENT = 0.08
+        self.TRAILING_ACTIVATION_PERCENT = 0.08
         self.MAX_TRADE_SECONDS = 15 * 60
 
         self.trailing_price = None
