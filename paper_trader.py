@@ -27,8 +27,8 @@ class PaperTrader:
         self.SL_PERCENT = 0.35
         self.TP_PERCENT = 0.55
         self.TRAIL_PERCENT = 0.25
-        self.MAX_TRADE_SECONDS = 15 * 60
         self.TRAILING_ACTIVATION_PERCENT = 0.25
+        self.MAX_TRADE_SECONDS = 15 * 60
 
         self.trailing_price = None
 
@@ -134,11 +134,11 @@ class PaperTrader:
         if pnl_pct_raw >= self.TRAILING_ACTIVATION_PERCENT:
             if price > self.trailing_price:
                 self.trailing_price = price
-        
+
             if price <= self.trailing_price * (1 - self.TRAIL_PERCENT / 100):
                 self.close_position(price, "TRAIL")
                 return
-        
+
         trade_age = (datetime.now() - self.entry_time).total_seconds()
 
         if trade_age >= self.MAX_TRADE_SECONDS and pnl_pct_raw < 0.20:
