@@ -24,10 +24,10 @@ class PaperTrader:
         self.fee_rate = fee_rate
         self.slippage_rate = slippage_rate
 
-        self.SL_PERCENT = 0.35
-        self.TP_PERCENT = 0.40
-        self.TRAIL_PERCENT = 0.15
-        self.TRAILING_ACTIVATION_PERCENT = 0.15
+        self.SL_PERCENT = 0.30
+        self.TP_PERCENT = 0.35
+        self.TRAIL_PERCENT = 0.10
+        self.TRAILING_ACTIVATION_PERCENT = 0.10
         self.MAX_TRADE_SECONDS = 15 * 60
 
         self.trailing_price = None
@@ -35,9 +35,15 @@ class PaperTrader:
         self.max_profit_seen = 0.0
         self.max_drawdown_seen = 0.0
 
+        # Dočasne vypnuté zapisovanie do CSV počas testovania
+        self.ENABLE_FILE_LOGGING = False
+
         self.init_log()
 
     def init_log(self):
+        if not self.ENABLE_FILE_LOGGING:
+            return
+
         file_exists = os.path.exists("trades_log.csv")
 
         if not file_exists:
@@ -69,6 +75,9 @@ class PaperTrader:
         max_profit_seen_pct=0.0,
         max_drawdown_seen_pct=0.0,
     ):
+        if not self.ENABLE_FILE_LOGGING:
+            return
+
         with open("trades_log.csv", "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -201,7 +210,7 @@ class PaperTrader:
 
         trade_age = (datetime.now() - self.entry_time).total_seconds()
 
-        if trade_age >= self.MAX_TRADE_SECONDS and pnl_pct_raw < 0.20:
+        if trade_age >= self.MAX_TRADE_SECONDS and pnl_pct_raw < 0.15:
             self.close_position(price, "TIME_STOP")
             return
 
