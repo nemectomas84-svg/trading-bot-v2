@@ -25,12 +25,15 @@ class PaperTrader:
         self.slippage_rate = slippage_rate
 
         self.SL_PERCENT = 0.35
-        self.TP_PERCENT = 0.55
-        self.TRAIL_PERCENT = 0.25
-        self.TRAILING_ACTIVATION_PERCENT = 0.25
+        self.TP_PERCENT = 0.40
+        self.TRAIL_PERCENT = 0.15
+        self.TRAILING_ACTIVATION_PERCENT = 0.15
         self.MAX_TRADE_SECONDS = 15 * 60
 
         self.trailing_price = None
+
+        self.max_profit_seen = 0.0
+        self.max_drawdown_seen = 0.0
 
         self.init_log()
 
@@ -48,10 +51,24 @@ class PaperTrader:
                     "pnl",
                     "pnl_pct",
                     "fees",
-                    "balance"
+                    "balance",
+                    "trade_duration_sec",
+                    "max_profit_seen_pct",
+                    "max_drawdown_seen_pct"
                 ])
 
-    def log_trade(self, action, price, reason, pnl=0.0, pnl_pct=0.0, fees=0.0):
+    def log_trade(
+        self,
+        action,
+        price,
+        reason,
+        pnl=0.0,
+        pnl_pct=0.0,
+        fees=0.0,
+        trade_duration_sec=0,
+        max_profit_seen_pct=0.0,
+        max_drawdown_seen_pct=0.0,
+    ):
         with open("trades_log.csv", "a", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([
@@ -62,7 +79,10 @@ class PaperTrader:
                 round(pnl, 4),
                 round(pnl_pct, 4),
                 round(fees, 4),
-                round(self.balance, 2)
+                round(self.balance, 2),
+                round(trade_duration_sec, 2),
+                round(max_profit_seen_pct, 4),
+                round(max_drawdown_seen_pct, 4),
             ])
 
     def open_position(self, side, price):
@@ -82,11 +102,25 @@ class PaperTrader:
         self.position_size_usdt = self.balance * self.position_fraction
         self.qty = self.position_size_usdt / execution_price
 
+        self.max_profit_seen = 0.0
+        self.max_drawdown_seen = 0.0
+
         entry_fee = self.position_size_usdt * self.fee_rate
         self.balance -= entry_fee
 
         print(f"📈 OPEN BUY at {execution_price:.2f} | fee: {entry_fee:.2f}")
-        self.log_trade("OPEN_BUY", execution_price, "signal", 0.0, 0.0, entry_fee)
+
+        self.log_trade(
+            "OPEN_BUY",
+            execution_price,
+            "signal",
+            0.0,
+            0.0,
+            entry_fee,
+            0,
+            0.0,
+            0.0,
+        )
 
     def close_position(self, price, reason):
         if self.position != "BUY":
@@ -101,14 +135,32 @@ class PaperTrader:
         net_pnl = gross_pnl - exit_fee
         pnl_pct = net_pnl / self.position_size_usdt * 100
 
+        trade_duration_sec = 0
+        if self.entry_time is not None:
+            trade_duration_sec = (datetime.now() - self.entry_time).total_seconds()
+
         self.balance += net_pnl
 
         print(
             f"❌ CLOSE BUY at {execution_price:.2f} | {reason} | "
-            f"PNL: {net_pnl:.2f} ({pnl_pct:.2f}%) | BALANCE: {self.balance:.2f}"
+            f"PNL: {net_pnl:.2f} ({pnl_pct:.2f}%) | "
+            f"MAX PROFIT: {self.max_profit_seen:.2f}% | "
+            f"MAX DD: {self.max_drawdown_seen:.2f}% | "
+            f"DURATION: {trade_duration_sec:.0f}s | "
+            f"BALANCE: {self.balance:.2f}"
         )
 
-        self.log_trade("CLOSE_BUY", execution_price, reason, net_pnl, pnl_pct, exit_fee)
+        self.log_trade(
+            "CLOSE_BUY",
+            execution_price,
+            reason,
+            net_pnl,
+            pnl_pct,
+            exit_fee,
+            trade_duration_sec,
+            self.max_profit_seen,
+            self.max_drawdown_seen,
+        )
 
         self.position = None
         self.entry_price = 0.0
@@ -116,12 +168,20 @@ class PaperTrader:
         self.trailing_price = None
         self.position_size_usdt = 0.0
         self.qty = 0.0
+        self.max_profit_seen = 0.0
+        self.max_drawdown_seen = 0.0
 
     def update(self, price):
         if self.position != "BUY":
             return
 
         pnl_pct_raw = (price - self.entry_price) / self.entry_price * 100
+
+        if pnl_pct_raw > self.max_profit_seen:
+            self.max_profit_seen = pnl_pct_raw
+
+        if pnl_pct_raw < self.max_drawdown_seen:
+            self.max_drawdown_seen = pnl_pct_raw
 
         if price <= self.entry_price * (1 - self.SL_PERCENT / 100):
             self.close_position(price, "SL")
