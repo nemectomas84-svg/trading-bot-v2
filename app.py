@@ -15,10 +15,11 @@ COOLDOWN = 300
 EMA_FAST = 20
 EMA_SLOW = 50
 
-MIN_DIFF_PCT = 0.020
+MIN_DIFF_PCT = 0.015
 MIN_MOVE_PCT = 0.040
+MAX_PRICE_ABOVE_EMA20_PCT = 0.060
 
-CONFIRMATION_COUNT = 3
+CONFIRMATION_COUNT = 2
 
 signal_buffer = []
 
@@ -69,19 +70,19 @@ def strategy(price):
     strong_trend = diff_pct >= MIN_DIFF_PCT
     enough_movement = move_pct >= MIN_MOVE_PCT
 
-    trend_up = ema20 > ema50
-    price_above_ema20 = price > ema20
-    strong_trend = diff_pct >= MIN_DIFF_PCT
-    enough_movement = move_pct >= MIN_MOVE_PCT
+    price_distance_ema20_pct = (price - ema20) / ema20 * 100
+    not_overextended = price_distance_ema20_pct <= MAX_PRICE_ABOVE_EMA20_PCT
 
     print(
         f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
-        f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}%"
+        f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}% | "
+        f"DIST_EMA20: {price_distance_ema20_pct:.3f}%"
     )
 
     print(
         f"FILTERS | trend_up={trend_up} | price_above_ema20={price_above_ema20} | "
-        f"strong_trend={strong_trend} | enough_movement={enough_movement}"
+        f"strong_trend={strong_trend} | enough_movement={enough_movement} | "
+        f"not_overextended={not_overextended}"
     )
 
     if not trend_up:
@@ -92,18 +93,14 @@ def strategy(price):
         print("NO BUY: trend too weak")
     elif not enough_movement:
         print("NO BUY: movement too weak")
+    elif not not_overextended:
+        print("NO BUY: price too far above EMA20")
 
-    if diff_pct < MIN_DIFF_PCT:
-        return
-
-    if move_pct < MIN_MOVE_PCT:
-        return
-
-    if trend_up and price_above_ema20 and strong_trend and enough_movement:
+    if trend_up and price_above_ema20 and strong_trend and enough_movement and not_overextended:
         current_signal = "BUY"
     else:
         current_signal = "SELL"
-        
+
     signal_buffer.append(current_signal)
 
     if len(signal_buffer) > CONFIRMATION_COUNT:
@@ -126,9 +123,6 @@ def strategy(price):
         if trader.position is not None:
             return
 
-        if last_signal == "BUY" and trader.position == "BUY":
-            return
-    
         if now - last_entry_time < COOLDOWN:
             return
 
