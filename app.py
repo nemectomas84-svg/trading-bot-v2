@@ -15,10 +15,11 @@ COOLDOWN = 300
 EMA_FAST = 20
 EMA_SLOW = 50
 
-MIN_DIFF_PCT = 0.015
-MIN_MOVE_PCT = 0.04
+MIN_DIFF_PCT = 0.025
+MIN_MOVE_PCT = 0.08
 
-CONFIRMATION_COUNT = 3
+CONFIRMATION_COUNT = 4
+
 signal_buffer = []
 
 
@@ -74,8 +75,16 @@ def strategy(price):
     if move_pct < MIN_MOVE_PCT:
         return
 
-    current_signal = "BUY" if ema20 > ema50 else "SELL"
-
+    trend_up = ema20 > ema50
+    price_above_ema20 = price > ema20
+    strong_trend = diff_pct >= MIN_DIFF_PCT
+    enough_movement = move_pct >= MIN_MOVE_PCT
+    
+    if trend_up and price_above_ema20 and strong_trend and enough_movement:
+        current_signal = "BUY"
+    else:
+        current_signal = "SELL"
+    
     signal_buffer.append(current_signal)
 
     if len(signal_buffer) > CONFIRMATION_COUNT:
@@ -98,9 +107,9 @@ def strategy(price):
         if trader.position is not None:
             return
 
-        if last_signal == "BUY":
+        if last_signal == "BUY" and trader.position == "BUY":
             return
-
+    
         if now - last_entry_time < COOLDOWN:
             return
 
