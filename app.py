@@ -15,10 +15,10 @@ COOLDOWN = 300
 EMA_FAST = 20
 EMA_SLOW = 50
 
-MIN_DIFF_PCT = 0.025
-MIN_MOVE_PCT = 0.08
+MIN_DIFF_PCT = 0.020
+MIN_MOVE_PCT = 0.040
 
-CONFIRMATION_COUNT = 4
+CONFIRMATION_COUNT = 3
 
 signal_buffer = []
 
@@ -61,14 +61,20 @@ def strategy(price):
 
     diff_pct = pct_diff(ema20, ema50)
 
-    recent_prices = prices[-10:]
+    recent_prices = prices[-30:]
     move_pct = (max(recent_prices) - min(recent_prices)) / price * 100
 
     print(
         f"PRICE: {price:.2f} | EMA20: {ema20:.2f} | EMA50: {ema50:.2f} | "
         f"DIFF: {diff_pct:.3f}% | MOVE: {move_pct:.3f}%"
     )
-
+# debug
+    print(
+        f"FILTERS | trend_up={ema20 > ema50} | price_above_ema20={price > ema20} | "
+        f"strong_trend={diff_pct >= MIN_DIFF_PCT} | enough_movement={move_pct >= MIN_MOVE_PCT}"
+    )
+#end debug    
+    
     if diff_pct < MIN_DIFF_PCT:
         return
 
