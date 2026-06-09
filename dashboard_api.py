@@ -1,13 +1,14 @@
 from flask import Flask, jsonify, request
 import subprocess
 import os
-import signal
+import json
 
 app = Flask(__name__)
 
-BOT_PROCESS_FILE = "bot_process.pid"
 TELEGRAM_STATE_FILE = "telegram_enabled.txt"
 API_KEY = "change-this-secret-key"
+TRADER_STATE_FILE = "trader_state.json"
+BOT_SERVICE_NAME = "btc-bot"
 
 
 def check_auth():
@@ -15,26 +16,31 @@ def check_auth():
     return key == API_KEY
 
 
-def is_bot_running():
-    if not os.path.exists(BOT_PROCESS_FILE):
-        return False
-
+def run_command(command):
     try:
-        with open(BOT_PROCESS_FILE, "r") as f:
-            pid = int(f.read().strip())
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
 
-        os.kill(pid, 0)
-        return True
-    except:
-        return False
+        return {
+            "returncode": result.returncode,
+            "stdout": result.stdout.strip(),
+            "stderr": result.stderr.strip(),
+        }
+    except Exception as e:
+        return {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": str(e),
+        }
 
 
-def get_bot_pid():
-    if not os.path.exists(BOT_PROCESS_FILE):
-        return None
-
-    with open(BOT_PROCESS_FILE, "r") as f:
-        return int(f.read().strip())
+def is_bot_running():
+    result = run_command(["systemctl", "is-active", BOT_SERVICE_NAME])
+    return result["stdout"] == "active"
 
 
 def telegram_enabled():
@@ -45,6 +51,17 @@ def telegram_enabled():
         return f.read().strip() == "1"
 
 
+def get_trader_state():
+    if not os.path.exists(TRADER_STATE_FILE):
+        return None
+
+    try:
+        with open(TRADER_STATE_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return None
+
+
 @app.route("/status", methods=["GET"])
 def status():
     if not check_auth():
@@ -52,7 +69,8 @@ def status():
 
     return jsonify({
         "bot_running": is_bot_running(),
-        "telegram_enabled": telegram_enabled()
+        "telegram_enabled": telegram_enabled(),
+        "trader": get_trader_state()
     })
 
 
@@ -64,17 +82,19 @@ def start_bot():
     if is_bot_running():
         return jsonify({"status": "already_running"})
 
-    process = subprocess.Popen(
-        ["python3", "app.py"],
-        stdout=open("bot_output.log", "a"),
-        stderr=open("bot_error.log", "a"),
-        preexec_fn=os.setsid
-    )
+    result = run_command(["systemctl", "start", BOT_SERVICE_NAME])
 
-    with open(BOT_PROCESS_FILE, "w") as f:
-        f.write(str(process.pid))
+    if result["returncode"] != 0:
+        return jsonify({
+            "status": "error",
+            "message": result["stderr"],
+            "command_output": result,
+        }), 500
 
-    return jsonify({"status": "started", "pid": process.pid})
+    return jsonify({
+        "status": "started",
+        "bot_running": is_bot_running()
+    })
 
 
 @app.route("/stop", methods=["POST"])
@@ -85,17 +105,19 @@ def stop_bot():
     if not is_bot_running():
         return jsonify({"status": "not_running"})
 
-    pid = get_bot_pid()
+    result = run_command(["systemctl", "stop", BOT_SERVICE_NAME])
 
-    try:
-        os.killpg(os.getpgid(pid), signal.SIGTERM)
-    except:
-        pass
+    if result["returncode"] != 0:
+        return jsonify({
+            "status": "error",
+            "message": result["stderr"],
+            "command_output": result,
+        }), 500
 
-    if os.path.exists(BOT_PROCESS_FILE):
-        os.remove(BOT_PROCESS_FILE)
-
-    return jsonify({"status": "stopped"})
+    return jsonify({
+        "status": "stopped",
+        "bot_running": is_bot_running()
+    })
 
 
 @app.route("/telegram", methods=["POST"])
