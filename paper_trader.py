@@ -49,8 +49,7 @@ class PaperTrader:
         self.current_pnl_pct = 0.0
         self.current_trade_duration_sec = 0.0
 
-	self.STATE_FILE = "data/trader_state.json"
-        
+        self.STATE_FILE = "data/trader_state.json"
         self.ENABLE_FILE_LOGGING = False
 
         self.init_log()
