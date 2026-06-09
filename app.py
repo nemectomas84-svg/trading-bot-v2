@@ -26,7 +26,7 @@ CONFIRMATION_COUNT = 5
 
 signal_buffer = []
 
-TRADER_STATE_FILE = "trader_state.json"
+TRADER_STATE_FILE = "data/trader_state.json"
 
 
 def update_dashboard_state(
