@@ -139,14 +139,24 @@ def logs():
     if not check_auth():
         return jsonify({"error": "unauthorized"}), 401
 
-    if not os.path.exists("logs/bot_output.log"):
-        return jsonify({"logs": ""})
+    result = run_command([
+        "journalctl",
+        "-u",
+        "btc-bot",
+        "-n",
+        "150",
+        "--no-pager",
+        "--output",
+        "cat"
+    ])
 
-    with open("logs/bot_output.log", "r") as f:
-        lines = f.readlines()[-150:]
+    if result["returncode"] != 0:
+        return jsonify({
+            "logs": "",
+            "error": result["stderr"]
+        })
 
-    return jsonify({"logs": "".join(lines)})
-
+    return jsonify({"logs": result["stdout"]})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050)
