@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 TELEGRAM_STATE_FILE = "telegram_enabled.txt"
 API_KEY = "change-this-secret-key"
-TRADER_STATE_FILE = "trader_state.json"
+TRADER_STATE_FILE = "data/trader_state.json"
 BOT_SERVICE_NAME = "btc-bot"
 
 
@@ -139,10 +139,10 @@ def logs():
     if not check_auth():
         return jsonify({"error": "unauthorized"}), 401
 
-    if not os.path.exists("bot_output.log"):
+    if not os.path.exists("logs/bot_output.log"):
         return jsonify({"logs": ""})
 
-    with open("bot_output.log", "r") as f:
+    with open("logs/bot_output.log", "r") as f:
         lines = f.readlines()[-150:]
 
     return jsonify({"logs": "".join(lines)})
